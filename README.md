@@ -2,6 +2,8 @@
 
 Enables rocBLAS matmul support for **gfx1010** (AMD RX 5700 XT, Navi 10, RDNA1), which is not officially supported by any rocBLAS release.
 
+Most users should not install this repo directly. Run the `pytorch-gfx1010` installer, which installs this rocBLAS layer automatically when needed.
+
 ## Install
 
 Use the installer:
