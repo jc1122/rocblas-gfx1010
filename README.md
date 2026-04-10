@@ -2,6 +2,20 @@
 
 Enables rocBLAS matmul support for **gfx1010** (AMD RX 5700 XT, Navi 10, RDNA1), which is not officially supported by any rocBLAS release.
 
+## Install
+
+Use the installer:
+
+```bash
+curl -sSL https://raw.githubusercontent.com/jc1122/rocblas-gfx1010/main/install.sh | bash
+```
+
+This installs the gfx1010 rocBLAS runtime into `/opt/rocm`. On a normal system install, it
+will use `sudo` for the final copy step.
+
+Do **not** expect `pytorch-gfx1010` to provide BLAS support by itself. Matmul, `nn.Linear`,
+and `bmm` require this modified rocBLAS runtime as a separate system-level dependency.
+
 ## Background
 
 rocBLAS uses [Tensile](https://github.com/ROCmSoftwarePlatform/Tensile) to generate GEMM kernels. Official rocBLAS builds only ship Tensile libraries for gfx906, gfx908, gfx90a, gfx1030, gfx1100, etc. — gfx1010 (RDNA1) is absent. Without a TensileLibrary.dat for gfx1010, rocBLAS calls `abort()` on the first matmul.
@@ -22,29 +36,35 @@ Supported GEMM types after the patch: `SS` (float32), `DD` (float64), `HH` (floa
 - rocBLAS source: `git clone --branch rocm-6.4.0 https://github.com/ROCm/rocBLAS`
 - Python 3, `tensile` pip package
 
-## Usage
+## Supported install modes
 
 ```bash
-# Clone rocBLAS 6.4
-git clone --branch rocm-6.4.0 --depth 1 https://github.com/ROCm/rocBLAS ~/rocblas-build
-cd ~/rocblas-build
+# Release install (default, fast)
+curl -sSL https://raw.githubusercontent.com/jc1122/rocblas-gfx1010/main/install.sh | bash
 
-# Copy in the navi10 logic files
-cp /path/to/this/repo/navi10_logic/*.yaml \
-   library/src/blas3/Tensile/Logic/asm_full/navi10/
-
-# Build and install (takes ~10 minutes)
-bash /path/to/this/repo/build_gfx1010.sh
+# Source-build fallback
+curl -sSL https://raw.githubusercontent.com/jc1122/rocblas-gfx1010/main/install.sh | \
+  MODE=build bash
 ```
 
-The build script runs `rmake.py --architecture gfx1010 -j 24 --no-msgpack -i` and installs rocBLAS to `~/rocblas-build/build/release/rocblas-install/`.
+`MODE=release` installs a prebuilt runtime tarball from GitHub Releases. `MODE=build` clones
+`ROCm/rocBLAS` `rocm-6.4.0`, copies in the `navi10_logic` YAML files from this repo, builds
+the runtime, and installs it into `/opt/rocm`.
 
-Then copy to your ROCm installation:
-```bash
-sudo cp -r ~/rocblas-build/build/release/rocblas-install/lib/rocblas /opt/rocm/lib/
-sudo cp ~/rocblas-build/build/release/rocblas-install/lib/librocblas* /opt/rocm/lib/
-sudo cp -r ~/rocblas-build/build/release/rocblas-install/include/rocblas /opt/rocm/include/
-```
+The installer backs up the current rocBLAS runtime under
+`~/.cache/rocblas-gfx1010/backups/<timestamp>/` before replacing:
+
+- `/opt/rocm/lib/librocblas.so*`
+- `/opt/rocm/lib/rocblas/library/`
+
+## Runtime contents
+
+The release tarball contains the runtime subset needed for gfx1010 matmul support:
+
+- `lib/librocblas.so*`
+- `lib/rocblas/library/`
+
+It does not replace unrelated ROCm components.
 
 ## Tested with
 
